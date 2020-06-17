@@ -9,16 +9,45 @@ The minimum recommended etcd versions to run in **production** are 3.2.28+, 3.3.
 <hr>
 
 
-## [v3.3.21](https://github.com/etcd-io/etcd/releases/tag/v3.3.21) (TBD)
+## [v3.3.22](https://github.com/etcd-io/etcd/releases/tag/v3.3.22) (2020-05-20)
+
+See [code changes](https://github.com/etcd-io/etcd/compare/v3.3.21...v3.3.22) and [v3.3 upgrade guide](https://github.com/etcd-io/etcd/blob/master/Documentation/upgrades/upgrade_3_3.md) for any breaking changes.
+
+### Package `wal`
+
+- Add [missing CRC checksum check in WAL validate method otherwise causes panic](https://github.com/etcd-io/etcd/pull/11924).
+  - See https://github.com/etcd-io/etcd/issues/11918.
+
+### Go
+
+- Compile with [*Go 1.12.17*](https://golang.org/doc/devel/release.html#go1.12).
+
+
+<hr>
+
+
+## [v3.3.21](https://github.com/etcd-io/etcd/releases/tag/v3.3.21) (2020-05-18)
 
 See [code changes](https://github.com/etcd-io/etcd/compare/v3.3.20...v3.3.21) and [v3.3 upgrade guide](https://github.com/etcd-io/etcd/blob/master/Documentation/upgrades/upgrade_3_3.md) for any breaking changes.
 
+### `etcdctl`
+
+- Make sure [save snapshot downloads checksum for integrity checks](https://github.com/etcd-io/etcd/pull/11896).
+
+### Package `clientv3`
+
+- Make sure [save snapshot downloads checksum for integrity checks](https://github.com/etcd-io/etcd/pull/11896).
+
 ### etcd server
 
+- Improve logging around snapshot send and receive.
 - [Add log when etcdserver failed to apply command](https://github.com/etcd-io/etcd/pull/11670).
 - [Fix deadlock bug in mvcc](https://github.com/etcd-io/etcd/pull/11817).
+- Fix [inconsistency between WAL and server snapshot](https://github.com/etcd-io/etcd/pull/11888).
+  - Previously, server restore fails if it had crashed after persisting raft hard state but before saving snapshot.
+  - See https://github.com/etcd-io/etcd/issues/10219 for more.
 
-### Package Auth
+### Package `auth`
 
 - [Fix a data corruption bug by saving consistent index](https://github.com/etcd-io/etcd/pull/11652).
 
@@ -30,8 +59,8 @@ See [code changes](https://github.com/etcd-io/etcd/compare/v3.3.20...v3.3.21) an
 
 - Compile with [*Go 1.12.17*](https://golang.org/doc/devel/release.html#go1.12).
 
-<hr>
 
+<hr>
 
 
 ## [v3.3.20](https://github.com/etcd-io/etcd/releases/tag/v3.3.20) (2020-04-01)

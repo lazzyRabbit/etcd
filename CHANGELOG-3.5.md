@@ -60,6 +60,17 @@ See [code changes](https://github.com/etcd-io/etcd/compare/v3.4.0...v3.5.0) and 
 - Changed `pkg/flags` function signature to [support structured logger](https://github.com/etcd-io/etcd/pull/11616).
   - Previously, `SetFlagsFromEnv(prefix string, fs *flag.FlagSet) error`, now `SetFlagsFromEnv(lg *zap.Logger, prefix string, fs *flag.FlagSet) error`.
   - Previously, `SetPflagsFromEnv(prefix string, fs *pflag.FlagSet) error`, now `SetPflagsFromEnv(lg *zap.Logger, prefix string, fs *pflag.FlagSet) error`.
+- Changed behavior on [existing dir permission](https://github.com/etcd-io/etcd/pull/11798).
+  - Previously, the permission was not checked on existing data directory and the directory used for automatically generating self-signed certificates for TLS connections with clients. Now a check is added to make sure those directories, if already exist, has a desired permission of 700 on Linux and 777 on Windows.
+
+
+### `etcdctl`
+
+- Make sure [save snapshot downloads checksum for integrity checks](https://github.com/etcd-io/etcd/pull/11896).
+
+### Security
+
+- Add [`TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256` and `TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256` to `etcd --cipher-suites`](https://github.com/etcd-io/etcd/pull/11864).
 
 ### Metrics, Monitoring
 
@@ -89,6 +100,7 @@ Note that any `etcd_debugging_*` metrics are experimental and subject to change.
   - `etcd --enable-v2=true --enable-v2v3=/aaa` to enable v2 API server that is backed by **v3 storage**.
   - `etcd --enable-v2=false --enable-v2v3=''` to disable v2 API server.
   - `etcd --enable-v2=false --enable-v2v3=/aaa` to disable v2 API server. TODO: error?
+  - Add [`TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256` and `TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256` to `etcd --cipher-suites`](https://github.com/etcd-io/etcd/pull/11864).
   - Automatically [create parent directory if it does not exist](https://github.com/etcd-io/etcd/pull/9626) (fix [issue#9609](https://github.com/etcd-io/etcd/issues/9609)).
   - v4.0 will configure `etcd --enable-v2=true --enable-v2v3=/aaa` to enable v2 API server that is backed by **v3 storage**.
 - [`etcd --backend-bbolt-freelist-type`] flag is now stable.
@@ -106,6 +118,14 @@ Note that any `etcd_debugging_*` metrics are experimental and subject to change.
 - Remove [redundant storage restore operation to shorten the startup time](https://github.com/etcd-io/etcd/pull/11779).
   - With 40 million key test data,it can shorten the startup time from 5 min to 2.5 min.
 - [Fix deadlock bug in mvcc](https://github.com/etcd-io/etcd/pull/11817).
+- Fix [inconsistency between WAL and server snapshot](https://github.com/etcd-io/etcd/pull/11888).
+  - Previously, server restore fails if it had crashed after persisting raft hard state but before saving snapshot.
+  - See https://github.com/etcd-io/etcd/issues/10219 for more.
+  - Add [missing CRC checksum check in WAL validate method otherwise causes panic](https://github.com/etcd-io/etcd/pull/11924).
+  - See https://github.com/etcd-io/etcd/issues/11918.
+- Improve logging around snapshot send and receive.
+- [Push down RangeOptions.limit argv into index tree to reduce memory overhead](https://github.com/etcd-io/etcd/pull/11990).
+- Add [reason field for /health response](https://github.com/etcd-io/etcd/pull/11983).
 
 ### Package `embed`
 
@@ -115,21 +135,24 @@ Note that any `etcd_debugging_*` metrics are experimental and subject to change.
 
 ### Package `clientv3`
 
-- Add [TryLock](https://github.com/etcd-io/etcd/pull/11104) method to `clientv3/concurrency/Mutex`. A non-blocking method on `Mutex` which does not wait to get lock on the Mutex, returns immediately if Mutex is locked by another session.
+- Add [`TryLock`](https://github.com/etcd-io/etcd/pull/11104) method to `clientv3/concurrency/Mutex`. A non-blocking method on `Mutex` which does not wait to get lock on the Mutex, returns immediately if Mutex is locked by another session.
 - Fix [client balancer failover against multiple endpoints](https://github.com/etcd-io/etcd/pull/11184).
-  - Fix ["kube-apiserver: failover on multi-member etcd cluster fails certificate check on DNS mismatch" (kubernetes#83028)](https://github.com/kubernetes/kubernetes/issues/83028).
+  - Fix [`"kube-apiserver: failover on multi-member etcd cluster fails certificate check on DNS mismatch"`](https://github.com/kubernetes/kubernetes/issues/83028).
 - Fix [IPv6 endpoint parsing in client](https://github.com/etcd-io/etcd/pull/11211).
   - Fix ["1.16: etcd client does not parse IPv6 addresses correctly when members are joining" (kubernetes#83550)](https://github.com/kubernetes/kubernetes/issues/83550).
 - Fix [errors caused by grpc changing balancer/resolver API](https://github.com/etcd-io/etcd/pull/11564). This change is compatible with grpc >= [v1.26.0](https://github.com/grpc/grpc-go/releases/tag/v1.26.0), but is not compatible with < v1.26.0 version.
 - Use [ServerName as the authority](https://github.com/etcd-io/etcd/pull/11574) after bumping to grpc v1.26.0. Remove workaround in [#11184](https://github.com/etcd-io/etcd/pull/11184).
 - Fix [`"hasleader"` metadata embedding](https://github.com/etcd-io/etcd/pull/11687).
   - Previously, `clientv3.WithRequireLeader(ctx)` was overwriting existing context keys.
+- Fix [watch leak caused by lazy cancellation](https://github.com/etcd-io/etcd/pull/11850). When clients cancel their watches, a cancel request will now be immediately sent to the server instead of waiting for the next watch event.
+- Make sure [save snapshot downloads checksum for integrity checks](https://github.com/etcd-io/etcd/pull/11896).
 
 ### Package `lease`
 
 - Fix [memory leak in follower nodes](https://github.com/etcd-io/etcd/pull/11731).
   - https://github.com/etcd-io/etcd/issues/11495
   - https://github.com/etcd-io/etcd/issues/11730
+- Make sure [grant/revoke won't be applied repeatedly after restarting etcd](https://github.com/etcd-io/etcd/pull/11935).
 
 ### Package `wal`
 
@@ -168,7 +191,6 @@ Note that any `etcd_debugging_*` metrics are experimental and subject to change.
 - Add [`/v3/auth/status`](https://github.com/etcd-io/etcd/pull/11536) endpoint to check if authentication is enabled
 - [Add `Linearizable` field to `etcdserverpb.MemberListRequest`](https://github.com/etcd-io/etcd/pull/11639).
 
-
 ### Dependency
 
 - Upgrade [`google.golang.org/grpc`](https://github.com/grpc/grpc-go/releases) from [**`v1.23.0`**](https://github.com/grpc/grpc-go/releases/tag/v1.23.0) to [**`v1.26.0`**](https://github.com/grpc/grpc-go/releases/tag/v1.26.0).
@@ -179,8 +201,8 @@ Note that any `etcd_debugging_*` metrics are experimental and subject to change.
 
 ### Go
 
-- Require [*Go 1.13+*](https://github.com/etcd-io/etcd/pull/11110).
-- Compile with [*Go 1.13*](https://golang.org/doc/devel/release.html#go1.13)
+- Require [*Go 1.14+*](https://github.com/etcd-io/etcd/pull/11110).
+- Compile with [*Go 1.14*](https://golang.org/doc/devel/release.html#go1.14)
 
 ### Project Governance
 
